@@ -1,0 +1,24 @@
+# Build results
+bin/
+obj/
+out/
+
+# Configuration transforms
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Local test results
+TestResults/
+*.coverage
+*.coveragexml
+
+# IDE specific
+.vs/
+.idea/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
