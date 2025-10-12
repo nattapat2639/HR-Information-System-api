@@ -15,6 +15,11 @@ public class InMemoryPageDataRepository : IPageDataRepository
         ["COMMON.DEPARTMENTS.HR"] = new[] { "People Operations", "Human Resources", "HR" },
         ["COMMON.DEPARTMENTS.IT"] = new[] { "Technology", "IT" },
         ["COMMON.DEPARTMENTS.FINANCE"] = new[] { "Finance" },
+        ["COMMON.DEPARTMENTS.MARKETING"] = new[] { "Marketing" },
+        ["COMMON.DEPARTMENTS.CUSTOMER_SUCCESS"] = new[] { "Customer Success", "CS" },
+        ["COMMON.DEPARTMENTS.OPERATIONS"] = new[] { "Operations" },
+        ["COMMON.DEPARTMENTS.SALES"] = new[] { "Sales" },
+        ["COMMON.DEPARTMENTS.DATA_ANALYTICS"] = new[] { "Data & Analytics", "Analytics" },
         ["COMMON.DEPARTMENTS.ALL"] = Array.Empty<string>(),
         ["COMMON.LOCATIONS.HQ"] = new[] { "Headquarters", "HQ" },
         ["COMMON.LOCATIONS.REGIONAL"] = new[] { "Regional offices", "Regional" },
@@ -34,6 +39,8 @@ public class InMemoryPageDataRepository : IPageDataRepository
         ["COMMON.STATUSES.SUBMITTED"] = new[] { "Submitted" },
         ["COMMON.STATUSES.CLOSED"] = new[] { "Closed" },
         ["COMMON.STATUSES.SUSPENDED"] = new[] { "Suspended" },
+        ["COMMON.STATUSES.ON_LEAVE"] = new[] { "On Leave" },
+        ["COMMON.STATUSES.PROBATION"] = new[] { "Probation" },
         ["COMMON.STATUSES.ALL"] = Array.Empty<string>(),
         ["PAGES.LEAVE.OPTIONS.ALL_TYPES"] = Array.Empty<string>(),
         ["PAGES.LEAVE.OPTIONS.ANNUAL"] = new[] { "Annual Leave" },
@@ -172,6 +179,113 @@ public class InMemoryPageDataRepository : IPageDataRepository
             {
                 ["overview"] = Template("dashboard", "overview", "PAGES.DASHBOARD.TODO")
             },
+            ["organization"] = new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["structure"] = Template(
+                    "organization",
+                    "structure",
+                    "PAGES.ORGANIZATION.STRUCTURE.NOTE",
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "People Operations"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Chanon Phumiphak"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "8"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "HR strategy, talent development")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Technology"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Anuwat Khem"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "14"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "3"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Product delivery, platform reliability")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Finance"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Benjamas Sriwilai"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "6"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Payroll, budgeting, treasury")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Marketing"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Oranicha Mek"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "6"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Demand generation, brand growth")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Customer Success"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Jirawat Kan"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "5"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "0"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Onboarding, renewals, support excellence")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Operations"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Amara Jittrakorn"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "5"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Facilities, procurement, logistics")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Sales"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Pimchanok Rukdee"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "3"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Enterprise acquisition, account growth")),
+                    Row(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Data & Analytics"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Piyada Sornchai"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "3"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Insights, dashboards, data governance"))),
+                ["workforce-plan"] = Template(
+                    "organization",
+                    "workforce-plan",
+                    "PAGES.ORGANIZATION.WORKFORCE_PLAN.NOTE",
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "People Operations"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "8"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "9"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Low"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "HR Business Partner")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Technology"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "14"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "16"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Senior Backend Engineer")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Finance"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "6"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "6"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Low"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Revenue Assurance Analyst")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Marketing"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "6"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "7"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Lifecycle Marketer")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Customer Success"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "5"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "5"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Low"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Technical Account Manager")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Operations"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "5"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "6"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Facilities Supervisor")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Sales"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "3"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "4"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "High"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Enterprise Account Executive")),
+                    Row(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Data & Analytics"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "3"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "4"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Analytics Engineer")))
+            },
             ["employee-records"] = new(StringComparer.OrdinalIgnoreCase)
             {
                 ["all"] = Template(
@@ -185,42 +299,48 @@ public class InMemoryPageDataRepository : IPageDataRepository
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", "People Operations"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "Active")),
                     Row(
-                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "IT-0005"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "HR-0002"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", "Supaporn Teerapat"),
-                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", "Lead Software Engineer"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", "Compensation Lead"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", "People Operations"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "Active")),
+                    Row(
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "IT-0003"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", "Thanawat Dee"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", "Senior Backend Engineer"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", "Technology"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "Active")),
                     Row(
-                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "FN-0010"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "FN-0001"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", "Nattawat Charoen"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", "Payroll Specialist"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", "Finance"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "On Leave")),
                     Row(
-                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "MK-0042"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "MK-0001"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", "Oranicha Mek"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", "Marketing Lead"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", "Marketing"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "Active")),
                     Row(
-                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "CS-0021"),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", "CS-0001"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", "Jirawat Kan"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", "Customer Success Lead"),
                         ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", "Customer Success"),
-                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "Probation"))),
+                        ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", "Active"))),
                 ["profile"] = Template("employee-records", "profile", "PAGES.EMPLOYEE_RECORDS.PROFILE.TODO"),
                 ["search"] = Template(
                     "employee-records",
                     "search",
                     "PAGES.EMPLOYEE_RECORDS.SEARCH.TODO",
                     Row(
-                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID", "MK-0042"),
-                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME", "Oranicha Mek"),
+                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID", "MK-0004"),
+                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME", "Suwit Phasuk"),
                         ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.DEPARTMENT", "Marketing"),
                         ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.LEVEL", "Senior")),
                     Row(
-                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID", "CS-0021"),
-                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME", "Jirawat Kan"),
+                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID", "CS-0002"),
+                        ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME", "Supawadee Ornnapa"),
                         ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.DEPARTMENT", "Customer Success"),
                         ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.LEVEL", "Lead")))
             },
@@ -436,9 +556,14 @@ public class InMemoryPageDataRepository : IPageDataRepository
                         ("PAGES.REPORTS.EMPLOYEE.COLUMNS.DEPARTMENT", "People Operations"),
                         ("PAGES.REPORTS.EMPLOYEE.COLUMNS.STATUS", "Active")),
                     Row(
-                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.EMPLOYEE_ID", "IT-0005"),
-                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.NAME", "Supaporn Teerapat"),
+                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.EMPLOYEE_ID", "IT-0003"),
+                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.NAME", "Thanawat Dee"),
                         ("PAGES.REPORTS.EMPLOYEE.COLUMNS.DEPARTMENT", "Technology"),
+                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.STATUS", "Active")),
+                    Row(
+                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.EMPLOYEE_ID", "MK-0001"),
+                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.NAME", "Oranicha Mek"),
+                        ("PAGES.REPORTS.EMPLOYEE.COLUMNS.DEPARTMENT", "Marketing"),
                         ("PAGES.REPORTS.EMPLOYEE.COLUMNS.STATUS", "Active"))),
                 ["leave"] = Template(
                     "reports",
@@ -527,8 +652,54 @@ public class InMemoryPageDataRepository : IPageDataRepository
             {
                 ["profile"] = Template("settings", "profile", "PAGES.SETTINGS.PROFILE.TODO"),
                 ["notifications"] = Template("settings", "notifications", "PAGES.SETTINGS.NOTIFICATIONS.TODO"),
-                ["system"] = Template("settings", "system", "PAGES.SETTINGS.SYSTEM.TODO"),
-                ["security"] = Template("settings", "security", "PAGES.SETTINGS.SECURITY.TODO")
+                ["system"] = Template(
+                    "settings",
+                    "system",
+                    "PAGES.SETTINGS.SYSTEM.NOTE",
+                    Row(
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Primary timezone"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "(UTC+07:00) Bangkok"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "IT Platform"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2025-02-15")),
+                    Row(
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Workweek template"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "Mon-Fri, 09:00-18:00"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "People Operations"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2025-01-08")),
+                    Row(
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Public holiday set"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "Thailand 2025"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "People Operations"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2025-02-01")),
+                    Row(
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Data residency"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "ap-southeast-1"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "Security Office"),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2024-12-12"))),
+                ["security"] = Template(
+                    "settings",
+                    "security",
+                    "PAGES.SETTINGS.SECURITY.NOTE",
+                    Row(
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Multi-factor authentication"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "Enforced"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-02-28"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Security Office")),
+                    Row(
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Password policy"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "12 chars / rotation 90 days"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-01-15"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Security Office")),
+                    Row(
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Privileged access review"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "In progress"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-03-05"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Internal Audit")),
+                    Row(
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Data loss prevention"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "Alerting"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-02-10"),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Security Office")))
             }
         };
     }
