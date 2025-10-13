@@ -34,6 +34,19 @@ public class InMemoryEmployeeRepository : IEmployeeRepository
         return Task.FromResult(employee);
     }
 
+    public Task<Employee?> GetByEmployeeNumberAsync(string employeeNumber, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(employeeNumber))
+        {
+            return Task.FromResult<Employee?>(null);
+        }
+
+        var employee = _employees.FirstOrDefault(
+            e => string.Equals(e.EmployeeNumber, employeeNumber, StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult(employee);
+    }
+
     private static List<Employee> BuildSeedData()
     {
         var now = DateTime.UtcNow;

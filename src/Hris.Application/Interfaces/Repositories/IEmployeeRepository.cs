@@ -6,5 +6,6 @@ public interface IEmployeeRepository
 {
     Task<IReadOnlyCollection<Employee>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Employee?> GetByEmployeeNumberAsync(string employeeNumber, CancellationToken cancellationToken = default);
     Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
 }

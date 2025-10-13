@@ -10,6 +10,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IPageDataService, PageDataService>();
+        services.AddScoped<IEmployeeFieldDefinitionService, EmployeeFieldDefinitionService>();
+        services.AddScoped<IEmployeeFieldValueService, EmployeeFieldValueService>();
         return services;
     }
 }

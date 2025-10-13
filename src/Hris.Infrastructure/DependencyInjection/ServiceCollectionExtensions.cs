@@ -24,6 +24,8 @@ public static class ServiceCollectionExtensions
         if (useInMemoryPageData)
         {
             services.AddSingleton<IEmployeeRepository, InMemoryEmployeeRepository>();
+            services.AddSingleton<IEmployeeFieldDefinitionRepository, InMemoryEmployeeFieldDefinitionRepository>();
+            services.AddSingleton<IEmployeeFieldValueRepository, InMemoryEmployeeFieldValueRepository>();
             services.AddSingleton<IPageDataRepository, InMemoryPageDataRepository>();
             return services;
         }
@@ -32,6 +34,8 @@ public static class ServiceCollectionExtensions
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<IEmployeeRepository, SqlEmployeeRepository>();
+        services.AddScoped<IEmployeeFieldDefinitionRepository, SqlEmployeeFieldDefinitionRepository>();
+        services.AddScoped<IEmployeeFieldValueRepository, SqlEmployeeFieldValueRepository>();
         services.AddScoped<IPageDataRepository, SqlPageDataRepository>();
 
         return services;

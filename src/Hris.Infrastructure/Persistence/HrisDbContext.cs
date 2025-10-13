@@ -31,6 +31,9 @@ public class HrisDbContext : DbContext
     public DbSet<UserRoleSummary> UserRoles => Set<UserRoleSummary>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
+    public DbSet<EmployeeFieldDefinition> EmployeeFieldDefinitions => Set<EmployeeFieldDefinition>();
+    public DbSet<EmployeeFieldOption> EmployeeFieldOptions => Set<EmployeeFieldOption>();
+    public DbSet<EmployeeFieldValue> EmployeeFieldValues => Set<EmployeeFieldValue>();
     public DbSet<SecuritySetting> SecuritySettings => Set<SecuritySetting>();
     public DbSet<WorkforcePlanEntry> WorkforcePlanEntries => Set<WorkforcePlanEntry>();
     public DbSet<HeadcountRequest> HeadcountRequests => Set<HeadcountRequest>();
@@ -189,6 +192,45 @@ public class HrisDbContext : DbContext
             entity.Property(e => e.Value).HasMaxLength(256);
             entity.Property(e => e.Owner).HasMaxLength(128);
             entity.Property(e => e.Category).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<EmployeeFieldDefinition>(entity =>
+        {
+            entity.Property(e => e.FieldKey).HasMaxLength(128);
+            entity.Property(e => e.DisplayName).HasMaxLength(128);
+            entity.Property(e => e.DataType).HasMaxLength(64);
+            entity.Property(e => e.Category).HasMaxLength(64);
+            entity.Property(e => e.Description).HasMaxLength(256);
+            entity.HasIndex(e => e.FieldKey).IsUnique();
+
+            entity.HasMany(e => e.Options)
+                .WithOne(option => option.FieldDefinition)
+                .HasForeignKey(option => option.FieldDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeFieldOption>(entity =>
+        {
+            entity.Property(e => e.Label).HasMaxLength(128);
+            entity.Property(e => e.Value).HasMaxLength(128);
+        });
+
+        modelBuilder.Entity<EmployeeFieldValue>(entity =>
+        {
+            entity.Property(e => e.Value).HasMaxLength(1024);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(128);
+
+            entity.HasIndex(e => new { e.EmployeeId, e.FieldDefinitionId }).IsUnique();
+
+            entity.HasOne(e => e.Employee)
+                .WithMany()
+                .HasForeignKey(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.FieldDefinition)
+                .WithMany()
+                .HasForeignKey(e => e.FieldDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SecuritySetting>(entity =>
@@ -797,6 +839,338 @@ public class HrisDbContext : DbContext
         };
 
         modelBuilder.Entity<SystemConfiguration>().HasData(systemConfigurations);
+
+        var employeeFieldDefinitions = new List<EmployeeFieldDefinition>
+        {
+            new()
+            {
+                Id = CreateDeterministicGuid(880, 1),
+                FieldKey = "personal.full_name",
+                DisplayName = "Legal full name",
+                DataType = "text",
+                IsRequired = true,
+                Category = "Personal",
+                SortOrder = 1,
+                Description = "Official full name used on contracts and payslips.",
+                IsActive = true
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(880, 2),
+                FieldKey = "personal.birth_date",
+                DisplayName = "Date of birth",
+                DataType = "date",
+                IsRequired = false,
+                Category = "Personal",
+                SortOrder = 2,
+                Description = "Employee birth date for eligibility and benefits checks.",
+                IsActive = true
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(880, 3),
+                FieldKey = "job.department",
+                DisplayName = "Department",
+                DataType = "select",
+                IsRequired = true,
+                Category = "Employment",
+                SortOrder = 10,
+                Description = "Owning department within the organisation structure.",
+                IsActive = true
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(880, 4),
+                FieldKey = "job.job_level",
+                DisplayName = "Job level",
+                DataType = "select",
+                IsRequired = false,
+                Category = "Employment",
+                SortOrder = 11,
+                Description = "Career level aligned to the company job framework.",
+                IsActive = true
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(880, 5),
+                FieldKey = "job.employment_type",
+                DisplayName = "Employment type",
+                DataType = "select",
+                IsRequired = true,
+                Category = "Employment",
+                SortOrder = 12,
+                Description = "Indicates if the employee is full-time, contract, or intern.",
+                IsActive = true
+            }
+        };
+
+        modelBuilder.Entity<EmployeeFieldDefinition>().HasData(employeeFieldDefinitions);
+
+        var employeeFieldOptions = new List<EmployeeFieldOption>
+        {
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 1),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "People Operations",
+                Value = "People Operations",
+                SortOrder = 1
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 2),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Technology",
+                Value = "Technology",
+                SortOrder = 2
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 3),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Finance",
+                Value = "Finance",
+                SortOrder = 3
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 4),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Marketing",
+                Value = "Marketing",
+                SortOrder = 4
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 5),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Customer Success",
+                Value = "Customer Success",
+                SortOrder = 5
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 6),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Operations",
+                Value = "Operations",
+                SortOrder = 6
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 7),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Sales",
+                Value = "Sales",
+                SortOrder = 7
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 8),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Label = "Data & Analytics",
+                Value = "Data & Analytics",
+                SortOrder = 8
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 9),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Label = "Junior",
+                Value = "Junior",
+                SortOrder = 1
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 10),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Label = "Mid",
+                Value = "Mid",
+                SortOrder = 2
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 11),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Label = "Senior",
+                Value = "Senior",
+                SortOrder = 3
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 12),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Label = "Lead",
+                Value = "Lead",
+                SortOrder = 4
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 13),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Label = "Director",
+                Value = "Director",
+                SortOrder = 5
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 14),
+                FieldDefinitionId = CreateDeterministicGuid(880, 5),
+                Label = "Full-time",
+                Value = "Full-time",
+                SortOrder = 1
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 15),
+                FieldDefinitionId = CreateDeterministicGuid(880, 5),
+                Label = "Contract",
+                Value = "Contract",
+                SortOrder = 2
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(881, 16),
+                FieldDefinitionId = CreateDeterministicGuid(880, 5),
+                Label = "Intern",
+                Value = "Intern",
+                SortOrder = 3
+            }
+        };
+
+        modelBuilder.Entity<EmployeeFieldOption>().HasData(employeeFieldOptions);
+
+        var employeeFieldValues = new List<EmployeeFieldValue>
+        {
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 1),
+                EmployeeId = CreateDeterministicGuid(100, 1),
+                FieldDefinitionId = CreateDeterministicGuid(880, 1),
+                Value = "Anan Techakul",
+                UpdatedAtUtc = Utc(2025, 3, 12, 4, 15),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 2),
+                EmployeeId = CreateDeterministicGuid(100, 1),
+                FieldDefinitionId = CreateDeterministicGuid(880, 2),
+                Value = "1991-05-18",
+                UpdatedAtUtc = Utc(2025, 3, 12, 4, 15),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 3),
+                EmployeeId = CreateDeterministicGuid(100, 1),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Value = "Technology",
+                UpdatedAtUtc = Utc(2025, 3, 12, 4, 15),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 4),
+                EmployeeId = CreateDeterministicGuid(100, 1),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Value = "Senior",
+                UpdatedAtUtc = Utc(2025, 3, 12, 4, 15),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 5),
+                EmployeeId = CreateDeterministicGuid(100, 1),
+                FieldDefinitionId = CreateDeterministicGuid(880, 5),
+                Value = "Full-time",
+                UpdatedAtUtc = Utc(2025, 3, 12, 4, 15),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 6),
+                EmployeeId = CreateDeterministicGuid(100, 2),
+                FieldDefinitionId = CreateDeterministicGuid(880, 1),
+                Value = "Suchada Pradchaphet",
+                UpdatedAtUtc = Utc(2025, 3, 11, 7, 0),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 7),
+                EmployeeId = CreateDeterministicGuid(100, 2),
+                FieldDefinitionId = CreateDeterministicGuid(880, 2),
+                Value = "1993-11-02",
+                UpdatedAtUtc = Utc(2025, 3, 11, 7, 0),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 8),
+                EmployeeId = CreateDeterministicGuid(100, 2),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Value = "Operations",
+                UpdatedAtUtc = Utc(2025, 3, 11, 7, 0),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 9),
+                EmployeeId = CreateDeterministicGuid(100, 2),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Value = "Lead",
+                UpdatedAtUtc = Utc(2025, 3, 11, 7, 0),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 10),
+                EmployeeId = CreateDeterministicGuid(100, 2),
+                FieldDefinitionId = CreateDeterministicGuid(880, 5),
+                Value = "Full-time",
+                UpdatedAtUtc = Utc(2025, 3, 11, 7, 0),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 11),
+                EmployeeId = CreateDeterministicGuid(100, 3),
+                FieldDefinitionId = CreateDeterministicGuid(880, 1),
+                Value = "Korn Kittiphob",
+                UpdatedAtUtc = Utc(2025, 3, 10, 9, 30),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 12),
+                EmployeeId = CreateDeterministicGuid(100, 3),
+                FieldDefinitionId = CreateDeterministicGuid(880, 3),
+                Value = "People Operations",
+                UpdatedAtUtc = Utc(2025, 3, 10, 9, 30),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 13),
+                EmployeeId = CreateDeterministicGuid(100, 3),
+                FieldDefinitionId = CreateDeterministicGuid(880, 4),
+                Value = "Lead",
+                UpdatedAtUtc = Utc(2025, 3, 10, 9, 30),
+                UpdatedBy = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(882, 14),
+                EmployeeId = CreateDeterministicGuid(100, 3),
+                FieldDefinitionId = CreateDeterministicGuid(880, 5),
+                Value = "Contract",
+                UpdatedAtUtc = Utc(2025, 3, 10, 9, 30),
+                UpdatedBy = "People Operations"
+            }
+        };
+
+        modelBuilder.Entity<EmployeeFieldValue>().HasData(employeeFieldValues);
 
         var securitySettings = new List<SecuritySetting>
         {

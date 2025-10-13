@@ -40,4 +40,18 @@ public class SqlEmployeeRepository : IEmployeeRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
+
+    public async Task<Employee?> GetByEmployeeNumberAsync(string employeeNumber, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(employeeNumber))
+        {
+            return null;
+        }
+
+        return await _context.Employees
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                e => e.EmployeeNumber == employeeNumber,
+                cancellationToken);
+    }
 }

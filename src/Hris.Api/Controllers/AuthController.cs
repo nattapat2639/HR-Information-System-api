@@ -33,8 +33,8 @@ public class AuthController : ControllerBase
 
     private static readonly Dictionary<string, string[]> RolePermissions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Admin"] = new[] { "settings:manage", "security:manage", "reports:access", "users:manage" },
-        ["Manager"] = new[] { "team:approve", "reports:view" },
+        ["Admin"] = new[] { "settings:manage", "security:manage", "reports:access", "users:manage", "team:approve" },
+        ["Manager"] = new[] { "team:approve" },
         ["User"] = Array.Empty<string>()
     };
 

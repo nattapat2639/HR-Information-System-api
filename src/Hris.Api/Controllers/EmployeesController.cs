@@ -36,4 +36,34 @@ public class EmployeesController : ControllerBase
 
         return Ok(employee);
     }
+
+    [HttpPost]
+    [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CreateEmployee([FromBody] EmployeeCreateRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var employee = await _employeeService.CreateEmployeeAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetEmployee), new { id = employee.Id }, employee);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return MapInvalidOperation(ex);
+        }
+    }
+
+    private ActionResult MapInvalidOperation(InvalidOperationException exception)
+    {
+        return exception.Message switch
+        {
+            "EMPLOYEE_NUMBER_EXISTS" => Conflict(new { message = exception.Message }),
+            "EMPLOYEE_NUMBER_REQUIRED" => BadRequest(new { message = exception.Message }),
+            "EMPLOYEE_FULL_NAME_REQUIRED" => BadRequest(new { message = exception.Message }),
+            "EMPLOYEE_DEPARTMENT_REQUIRED" => BadRequest(new { message = exception.Message }),
+            "EMPLOYEE_POSITION_REQUIRED" => BadRequest(new { message = exception.Message }),
+            _ => BadRequest(new { message = exception.Message })
+        };
+    }
 }
