@@ -124,7 +124,8 @@ public class SqlPageDataRepository : IPageDataRepository
         "enddate",
         "opendate",
         "closedate",
-        "submittedon"
+        "submittedon",
+        "employeenumbers"
     };
 
     private readonly HrisDbContext _context;
@@ -199,13 +200,7 @@ public class SqlPageDataRepository : IPageDataRepository
                     e => e.Status
                 },
                 q => q.OrderBy(e => e.EmployeeNumber),
-                employee => CreateRow(
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID", employee.EmployeeNumber),
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", employee.FullName),
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", employee.Position),
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", employee.Department),
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", employee.Status ?? string.Empty),
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.LAST_EVENT", ResolveLatestEvent(employee))),
+                employee => CreateEmployeeRow(employee, includeLevel: false),
                 cancellationToken: cancellationToken),
             "search" => BuildPageAsync(
                 module,
@@ -224,13 +219,7 @@ public class SqlPageDataRepository : IPageDataRepository
                     e => e.Status
                 },
                 q => q.OrderBy(e => e.FullName),
-                employee => CreateRow(
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID", employee.EmployeeNumber),
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME", employee.FullName),
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.DEPARTMENT", employee.Department),
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.LEVEL", ResolveLevelFromPosition(employee.Position)),
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.STATUS", employee.Status ?? string.Empty),
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EVENT", ResolveLatestEvent(employee))),
+                employee => CreateEmployeeRow(employee, includeLevel: true),
                 cancellationToken: cancellationToken),
             "profile" => Task.FromResult<PageDataDto?>(CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.EMPLOYEE_RECORDS.PROFILE.TODO")),
             _ => Task.FromResult<PageDataDto?>(null)
@@ -1213,6 +1202,36 @@ public class SqlPageDataRepository : IPageDataRepository
         var index = Math.Abs(HashCode.Combine(employee.EmployeeNumber, employee.Department)) % EmployeeEventTemplates.Length;
         var template = EmployeeEventTemplates[index];
         return template.Title.Replace("{dept}", employee.Department ?? "HQ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static PageRowDto CreateEmployeeRow(Employee employee, bool includeLevel)
+    {
+        var columns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.EMPLOYEE_ID"] = employee.EmployeeNumber,
+            ["PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME"] = employee.FullName,
+            ["PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION"] = employee.Position,
+            ["PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT"] = employee.Department,
+            ["PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS"] = employee.Status ?? string.Empty,
+            ["PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.LAST_EVENT"] = ResolveLatestEvent(employee)
+        };
+
+        if (includeLevel)
+        {
+            columns["PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID"] = employee.EmployeeNumber;
+            columns["PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME"] = employee.FullName;
+            columns["PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.DEPARTMENT"] = employee.Department;
+            columns["PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.LEVEL"] = ResolveLevelFromPosition(employee.Position);
+            columns["PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.STATUS"] = employee.Status ?? string.Empty;
+            columns["PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EVENT"] = ResolveLatestEvent(employee);
+        }
+
+        var actions = new[]
+        {
+            new PageRowActionDto("PAGES.EMPLOYEE_RECORDS.ACTIONS.VIEW_PROFILE", "open_in_new", "view-profile")
+        };
+
+        return new PageRowDto(columns, actions);
     }
 
     private sealed class ParameterReplaceVisitor : ExpressionVisitor
