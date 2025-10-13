@@ -32,6 +32,9 @@ public class HrisDbContext : DbContext
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<SystemConfiguration> SystemConfigurations => Set<SystemConfiguration>();
     public DbSet<SecuritySetting> SecuritySettings => Set<SecuritySetting>();
+    public DbSet<WorkforcePlanEntry> WorkforcePlanEntries => Set<WorkforcePlanEntry>();
+    public DbSet<HeadcountRequest> HeadcountRequests => Set<HeadcountRequest>();
+    public DbSet<SecurityAuditLog> SecurityAuditLogs => Set<SecurityAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -182,14 +185,43 @@ public class HrisDbContext : DbContext
 
         modelBuilder.Entity<SystemConfiguration>(entity =>
         {
-            entity.Property(e => e.Timezone).HasMaxLength(128);
-            entity.Property(e => e.Workweek).HasMaxLength(64);
+            entity.Property(e => e.Key).HasMaxLength(64);
+            entity.Property(e => e.Value).HasMaxLength(256);
+            entity.Property(e => e.Owner).HasMaxLength(128);
+            entity.Property(e => e.Category).HasMaxLength(64);
         });
 
         modelBuilder.Entity<SecuritySetting>(entity =>
         {
-            entity.Property(e => e.MfaMode).HasMaxLength(64);
-            entity.Property(e => e.PasswordPolicy).HasMaxLength(64);
+            entity.Property(e => e.Control).HasMaxLength(128);
+            entity.Property(e => e.Status).HasMaxLength(128);
+            entity.Property(e => e.Owner).HasMaxLength(128);
+            entity.Property(e => e.Severity).HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<WorkforcePlanEntry>(entity =>
+        {
+            entity.Property(e => e.Department).HasMaxLength(128);
+            entity.Property(e => e.DepartmentLead).HasMaxLength(128);
+            entity.Property(e => e.Focus).HasMaxLength(256);
+            entity.Property(e => e.AttritionRisk).HasMaxLength(32);
+            entity.Property(e => e.NextCriticalHire).HasMaxLength(128);
+            entity.Property(e => e.Owner).HasMaxLength(128);
+        });
+
+        modelBuilder.Entity<HeadcountRequest>(entity =>
+        {
+            entity.Property(e => e.Department).HasMaxLength(128);
+            entity.Property(e => e.RequestedBy).HasMaxLength(128);
+            entity.Property(e => e.Justification).HasMaxLength(512);
+            entity.Property(e => e.Status).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<SecurityAuditLog>(entity =>
+        {
+            entity.Property(e => e.PerformedBy).HasMaxLength(128);
+            entity.Property(e => e.Status).HasMaxLength(64);
+            entity.Property(e => e.Summary).HasMaxLength(1024);
         });
     }
 
@@ -235,7 +267,7 @@ public class HrisDbContext : DbContext
             var firstName = firstNames[i % firstNames.Length];
             var lastName = lastNames[(i * 7) % lastNames.Length];
             var fullName = $"{firstName} {lastName}";
-            var hiredAt = new DateTime(2017, 1, 5).AddDays((i * 29) % 3000);
+            var hiredAt = Utc(2017, 1, 5).AddDays((i * 29) % 3000);
 
             employees.Add(new Employee
             {
@@ -258,7 +290,7 @@ public class HrisDbContext : DbContext
         for (var i = 0; i < 200; i++)
         {
             var employee = employees[(i * 5 + 3) % employees.Count];
-            var startDate = new DateTime(2024, 1, 1).AddDays(i * 2 - 150);
+            var startDate = Utc(2024, 1, 1).AddDays(i * 2 - 150);
             var duration = (i % 5) + 1;
             var endDate = startDate.AddDays(duration - 1);
             var status = leaveStatuses[i % leaveStatuses.Length];
@@ -412,7 +444,7 @@ public class HrisDbContext : DbContext
             {
                 Id = CreateDeterministicGuid(600, 1),
                 Title = "Advanced Angular Workshop",
-                SessionDate = new DateTime(2025, 3, 18),
+                SessionDate = Utc(2025, 3, 18),
                 Trainer = "Anan Techakun",
                 Status = "Open"
             },
@@ -420,7 +452,7 @@ public class HrisDbContext : DbContext
             {
                 Id = CreateDeterministicGuid(600, 2),
                 Title = "Leadership for Managers",
-                SessionDate = new DateTime(2025, 4, 2),
+                SessionDate = Utc(2025, 4, 2),
                 Trainer = "Sasithorn P.",
                 Status = "Waitlist"
             },
@@ -428,7 +460,7 @@ public class HrisDbContext : DbContext
             {
                 Id = CreateDeterministicGuid(600, 3),
                 Title = "Financial Compliance Deep Dive",
-                SessionDate = new DateTime(2025, 5, 9),
+                SessionDate = Utc(2025, 5, 9),
                 Trainer = "James Walker",
                 Status = "Scheduled"
             },
@@ -436,7 +468,7 @@ public class HrisDbContext : DbContext
             {
                 Id = CreateDeterministicGuid(600, 4),
                 Title = "Customer Empathy Lab",
-                SessionDate = new DateTime(2025, 2, 24),
+                SessionDate = Utc(2025, 2, 24),
                 Trainer = "Warisa K.",
                 Status = "Completed"
             },
@@ -444,7 +476,7 @@ public class HrisDbContext : DbContext
             {
                 Id = CreateDeterministicGuid(600, 5),
                 Title = "Cloud Fundamentals",
-                SessionDate = new DateTime(2025, 1, 12),
+                SessionDate = Utc(2025, 1, 12),
                 Trainer = "Piyapong S.",
                 Status = "Completed"
             },
@@ -452,7 +484,7 @@ public class HrisDbContext : DbContext
             {
                 Id = CreateDeterministicGuid(600, 6),
                 Title = "Growth Marketing Experiments",
-                SessionDate = new DateTime(2025, 3, 30),
+                SessionDate = Utc(2025, 3, 30),
                 Trainer = "Arisa L.",
                 Status = "Open"
             }
@@ -466,7 +498,7 @@ public class HrisDbContext : DbContext
         {
             var employee = employees[(i * 2 + 5) % employees.Count];
             var program = trainingPrograms[i % trainingPrograms.Length];
-            var start = new DateTime(2024, 9, 1).AddDays(i * 5);
+            var start = Utc(2024, 9, 1).AddDays(i * 5);
             DateTime? end = null;
             var status = "In Progress";
 
@@ -504,7 +536,7 @@ public class HrisDbContext : DbContext
                 Id = CreateDeterministicGuid(620, i + 1),
                 RequestedBy = $"{firstNames[(i * 9) % firstNames.Length]} {lastNames[(i * 4) % lastNames.Length]}",
                 ProgramName = requestPrograms[i % requestPrograms.Length],
-                SubmittedOn = new DateTime(2025, 1, 5).AddDays(i * 3),
+                SubmittedOn = Utc(2025, 1, 5).AddDays(i * 3),
                 Status = requestStatuses[i % requestStatuses.Length]
             });
         }
@@ -518,24 +550,24 @@ public class HrisDbContext : DbContext
                 Id = CreateDeterministicGuid(700, 1),
                 Title = "2025 Q1 Engagement Pulse",
                 Status = "Open",
-                OpenDate = new DateTime(2025, 2, 24),
-                CloseDate = new DateTime(2025, 3, 20)
+                OpenDate = Utc(2025, 2, 24),
+                CloseDate = Utc(2025, 3, 20)
             },
             new()
             {
                 Id = CreateDeterministicGuid(700, 2),
                 Title = "Hybrid Work Feedback",
                 Status = "Scheduled",
-                OpenDate = new DateTime(2025, 4, 5),
-                CloseDate = new DateTime(2025, 4, 25)
+                OpenDate = Utc(2025, 4, 5),
+                CloseDate = Utc(2025, 4, 25)
             },
             new()
             {
                 Id = CreateDeterministicGuid(700, 3),
                 Title = "2024 People Experience Review",
                 Status = "Closed",
-                OpenDate = new DateTime(2024, 10, 1),
-                CloseDate = new DateTime(2024, 10, 20)
+                OpenDate = Utc(2024, 10, 1),
+                CloseDate = Utc(2024, 10, 20)
             }
         };
 
@@ -729,14 +761,38 @@ public class HrisDbContext : DbContext
             new()
             {
                 Id = CreateDeterministicGuid(930, 1),
-                Timezone = "(UTC+07:00) Bangkok",
-                Workweek = "Monday to Friday"
+                Key = "PrimaryTimezone",
+                Value = "(UTC+07:00) Bangkok",
+                Owner = "IT Platform",
+                UpdatedAtUtc = new DateTime(2025, 3, 1, 3, 0, 0, DateTimeKind.Utc),
+                Category = "Regionalisation"
             },
             new()
             {
                 Id = CreateDeterministicGuid(930, 2),
-                Timezone = "(UTC+01:00) Berlin",
-                Workweek = "Monday to Friday"
+                Key = "WorkweekTemplate",
+                Value = "Mon-Fri, 09:00-18:00",
+                Owner = "People Operations",
+                UpdatedAtUtc = new DateTime(2025, 2, 12, 6, 0, 0, DateTimeKind.Utc),
+                Category = "Scheduling"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(930, 3),
+                Key = "HolidayCalendar",
+                Value = "Thailand 2025",
+                Owner = "People Operations",
+                UpdatedAtUtc = new DateTime(2025, 1, 28, 9, 30, 0, DateTimeKind.Utc),
+                Category = "Scheduling"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(930, 4),
+                Key = "DataResidency",
+                Value = "ap-southeast-1",
+                Owner = "Security Office",
+                UpdatedAtUtc = new DateTime(2024, 12, 12, 4, 0, 0, DateTimeKind.Utc),
+                Category = "Platform"
             }
         };
 
@@ -747,18 +803,203 @@ public class HrisDbContext : DbContext
             new()
             {
                 Id = CreateDeterministicGuid(940, 1),
-                MfaMode = "Required",
-                PasswordPolicy = "Standard"
+                Control = "Multi-factor authentication",
+                Status = "Enforced",
+                Owner = "Security Office",
+                LastReviewedAtUtc = new DateTime(2025, 2, 28, 7, 45, 0, DateTimeKind.Utc),
+                Severity = "High"
             },
             new()
             {
                 Id = CreateDeterministicGuid(940, 2),
-                MfaMode = "Optional",
-                PasswordPolicy = "Strict"
+                Control = "Password policy",
+                Status = "12 chars / rotation 90 days",
+                Owner = "Security Office",
+                LastReviewedAtUtc = new DateTime(2025, 1, 15, 9, 15, 0, DateTimeKind.Utc),
+                Severity = "High"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(940, 3),
+                Control = "Privileged access review",
+                Status = "In progress",
+                Owner = "Internal Audit",
+                LastReviewedAtUtc = new DateTime(2025, 3, 5, 2, 30, 0, DateTimeKind.Utc),
+                Severity = "Medium"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(940, 4),
+                Control = "Data loss prevention",
+                Status = "Alerting",
+                Owner = "Security Office",
+                LastReviewedAtUtc = new DateTime(2025, 2, 10, 5, 50, 0, DateTimeKind.Utc),
+                Severity = "Medium"
             }
         };
 
         modelBuilder.Entity<SecuritySetting>().HasData(securitySettings);
+
+        var workforcePlanEntries = new List<WorkforcePlanEntry>
+        {
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 1),
+                Department = "People Operations",
+                DepartmentLead = "Chanon Phumiphak",
+                Focus = "HR strategy, talent development",
+                ApprovedHeadcountQ3 = 9,
+                AttritionRisk = "Low",
+                NextCriticalHire = "HR Business Partner",
+                UpdatedAtUtc = new DateTime(2025, 3, 10, 4, 0, 0, DateTimeKind.Utc),
+                Owner = "People Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 2),
+                Department = "Technology",
+                DepartmentLead = "Anuwat Khem",
+                Focus = "Product delivery, platform reliability",
+                ApprovedHeadcountQ3 = 16,
+                AttritionRisk = "Medium",
+                NextCriticalHire = "Senior Backend Engineer",
+                UpdatedAtUtc = new DateTime(2025, 3, 2, 8, 30, 0, DateTimeKind.Utc),
+                Owner = "Technology"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 3),
+                Department = "Finance",
+                DepartmentLead = "Benjamas Sriwilai",
+                Focus = "Payroll, budgeting, treasury",
+                ApprovedHeadcountQ3 = 6,
+                AttritionRisk = "Low",
+                NextCriticalHire = "Revenue Assurance Analyst",
+                UpdatedAtUtc = new DateTime(2025, 2, 20, 9, 0, 0, DateTimeKind.Utc),
+                Owner = "Finance"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 4),
+                Department = "Marketing",
+                DepartmentLead = "Oranicha Mek",
+                Focus = "Demand generation, brand growth",
+                ApprovedHeadcountQ3 = 7,
+                AttritionRisk = "Medium",
+                NextCriticalHire = "Lifecycle Marketer",
+                UpdatedAtUtc = new DateTime(2025, 3, 8, 6, 45, 0, DateTimeKind.Utc),
+                Owner = "Marketing"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 5),
+                Department = "Customer Success",
+                DepartmentLead = "Jirawat Kan",
+                Focus = "Onboarding, renewals, support excellence",
+                ApprovedHeadcountQ3 = 5,
+                AttritionRisk = "Low",
+                NextCriticalHire = "Technical Account Manager",
+                UpdatedAtUtc = new DateTime(2025, 3, 3, 11, 15, 0, DateTimeKind.Utc),
+                Owner = "Customer Success"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 6),
+                Department = "Operations",
+                DepartmentLead = "Amara Jittrakorn",
+                Focus = "Facilities, procurement, logistics",
+                ApprovedHeadcountQ3 = 6,
+                AttritionRisk = "Medium",
+                NextCriticalHire = "Facilities Supervisor",
+                UpdatedAtUtc = new DateTime(2025, 2, 27, 7, 10, 0, DateTimeKind.Utc),
+                Owner = "Operations"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 7),
+                Department = "Sales",
+                DepartmentLead = "Pimchanok Rukdee",
+                Focus = "Enterprise acquisition, account growth",
+                ApprovedHeadcountQ3 = 4,
+                AttritionRisk = "High",
+                NextCriticalHire = "Enterprise Account Executive",
+                UpdatedAtUtc = new DateTime(2025, 3, 6, 5, 20, 0, DateTimeKind.Utc),
+                Owner = "Sales"
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(950, 8),
+                Department = "Data & Analytics",
+                DepartmentLead = "Piyada Sornchai",
+                Focus = "Insights, dashboards, data governance",
+                ApprovedHeadcountQ3 = 4,
+                AttritionRisk = "Medium",
+                NextCriticalHire = "Analytics Engineer",
+                UpdatedAtUtc = new DateTime(2025, 2, 25, 10, 5, 0, DateTimeKind.Utc),
+                Owner = "Data & Analytics"
+            }
+        };
+
+        modelBuilder.Entity<WorkforcePlanEntry>().HasData(workforcePlanEntries);
+
+        var headcountRequests = new List<HeadcountRequest>
+        {
+            new()
+            {
+                Id = CreateDeterministicGuid(960, 1),
+                Department = "Technology",
+                RequestedHeadcount = 2,
+                RequestedBy = "Anuwat Khem",
+                Justification = "Increase backend squad capacity for FY25 roadmap.",
+                Status = "Pending",
+                RequestedAtUtc = new DateTime(2025, 3, 11, 2, 0, 0, DateTimeKind.Utc)
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(960, 2),
+                Department = "Sales",
+                RequestedHeadcount = 1,
+                RequestedBy = "Pimchanok Rukdee",
+                Justification = "Cover APAC enterprise pipeline growth.",
+                Status = "Approved",
+                RequestedAtUtc = new DateTime(2025, 2, 24, 3, 30, 0, DateTimeKind.Utc),
+                ResolvedAtUtc = new DateTime(2025, 3, 4, 8, 15, 0, DateTimeKind.Utc)
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(960, 3),
+                Department = "Data & Analytics",
+                RequestedHeadcount = 1,
+                RequestedBy = "Piyada Sornchai",
+                Justification = "Support new BI initiatives for finance and operations.",
+                Status = "Pending",
+                RequestedAtUtc = new DateTime(2025, 3, 2, 7, 45, 0, DateTimeKind.Utc)
+            }
+        };
+
+        modelBuilder.Entity<HeadcountRequest>().HasData(headcountRequests);
+
+        var securityAuditLogs = new List<SecurityAuditLog>
+        {
+            new()
+            {
+                Id = CreateDeterministicGuid(970, 1),
+                RunAtUtc = new DateTime(2025, 2, 18, 4, 0, 0, DateTimeKind.Utc),
+                PerformedBy = "Supaporn Teerapat",
+                Status = "Completed",
+                Summary = "Quarterly MFA and password rotation review completed with no blocking findings."
+            },
+            new()
+            {
+                Id = CreateDeterministicGuid(970, 2),
+                RunAtUtc = new DateTime(2025, 3, 6, 3, 15, 0, DateTimeKind.Utc),
+                PerformedBy = "Kanokwan Yodying",
+                Status = "In Progress",
+                Summary = "Privileged access certification awaiting confirmation from Operations lead."
+            }
+        };
+
+        modelBuilder.Entity<SecurityAuditLog>().HasData(securityAuditLogs);
     }
 
     private static Guid CreateDeterministicGuid(int scope, int index)
@@ -769,4 +1010,7 @@ public class HrisDbContext : DbContext
         var d = a + b + 12345;
         return Guid.ParseExact($"{a:X8}{b:X8}{c:X8}{d:X8}", "N");
     }
+
+    private static DateTime Utc(int year, int month, int day, int hour = 0, int minute = 0, int second = 0)
+        => new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
 }

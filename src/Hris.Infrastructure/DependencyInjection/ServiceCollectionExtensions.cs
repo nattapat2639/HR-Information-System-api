@@ -21,10 +21,9 @@ public static class ServiceCollectionExtensions
             useInMemoryPageData = parsedSetting;
         }
 
-        services.AddSingleton<IEmployeeRepository, InMemoryEmployeeRepository>();
-
         if (useInMemoryPageData)
         {
+            services.AddSingleton<IEmployeeRepository, InMemoryEmployeeRepository>();
             services.AddSingleton<IPageDataRepository, InMemoryPageDataRepository>();
             return services;
         }
@@ -32,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<HrisDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
+        services.AddScoped<IEmployeeRepository, SqlEmployeeRepository>();
         services.AddScoped<IPageDataRepository, SqlPageDataRepository>();
 
         return services;

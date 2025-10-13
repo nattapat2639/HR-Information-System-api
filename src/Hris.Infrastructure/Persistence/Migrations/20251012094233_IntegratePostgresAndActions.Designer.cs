@@ -3,6 +3,7 @@ using System;
 using Hris.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Hris.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(HrisDbContext))]
-    partial class HrisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251012094233_IntegratePostgresAndActions")]
+    partial class IntegratePostgresAndActions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -20,7 +20,20 @@ public class SqlPageDataRepository : IPageDataRepository
     private static readonly Guid DefaultPayrollEmployeeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private static readonly Guid DefaultPerformanceEmployeeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid DefaultTrainingEmployeeId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-    private static readonly DateTime HistoricCutoffDate = new(2025, 1, 1);
+    private static readonly DateTime HistoricCutoffDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly (string Title, string Type)[] EmployeeEventTemplates =
+    {
+        ("Promotion to Senior Specialist", "Promotion"),
+        ("Internal transfer to {dept} program office", "Transfer"),
+        ("Recognition award: Customer Hero", "Recognition"),
+        ("Completed AWS Practitioner certification", "Certification"),
+        ("Probation checkpoint completed", "Probation"),
+        ("Leadership workshop completed", "Development"),
+        ("Received retention bonus", "Compensation"),
+        ("Launched mentoring cohort as mentor", "Development"),
+        ("Performance plan exited successfully", "Performance"),
+        ("Approved remote work arrangement", "Policy")
+    };
 
     private static readonly Dictionary<string, string[]> FilterSynonyms = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -143,7 +156,7 @@ public class SqlPageDataRepository : IPageDataRepository
         return normalizedModule switch
         {
             "dashboard" => CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.DASHBOARD.TODO"),
-            "organization" => await GetOrganizationPageAsync(module, page, normalizedPage, pageNumber, pageSize, cancellationToken),
+            "organization" => await GetOrganizationPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
             "employee-records" => await GetEmployeeRecordsPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
             "leave-management" => await GetLeaveManagementPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
             "payroll" => await GetPayrollPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
@@ -152,7 +165,7 @@ public class SqlPageDataRepository : IPageDataRepository
             "engagement" => await GetEngagementPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
             "reports" => await GetReportsPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
             "users" => await GetUsersPageAsync(module, page, normalizedPage, pageNumber, pageSize, filters, cancellationToken),
-            "settings" => GetSettingsPage(module, page, normalizedPage, pageNumber, pageSize),
+            "settings" => await GetSettingsPage(module, page, normalizedPage, pageNumber, pageSize, cancellationToken),
             _ => null
         };
     }
@@ -191,7 +204,8 @@ public class SqlPageDataRepository : IPageDataRepository
                     ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.NAME", employee.FullName),
                     ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.POSITION", employee.Position),
                     ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.DEPARTMENT", employee.Department),
-                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", employee.Status ?? string.Empty)),
+                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.STATUS", employee.Status ?? string.Empty),
+                    ("PAGES.EMPLOYEE_RECORDS.LIST.COLUMNS.LAST_EVENT", ResolveLatestEvent(employee))),
                 cancellationToken: cancellationToken),
             "search" => BuildPageAsync(
                 module,
@@ -206,138 +220,136 @@ public class SqlPageDataRepository : IPageDataRepository
                     e => e.EmployeeNumber,
                     e => e.FullName,
                     e => e.Department,
-                    e => e.Position
+                    e => e.Position,
+                    e => e.Status
                 },
                 q => q.OrderBy(e => e.FullName),
                 employee => CreateRow(
                     ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EMPLOYEE_ID", employee.EmployeeNumber),
                     ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.NAME", employee.FullName),
                     ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.DEPARTMENT", employee.Department),
-                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.LEVEL", ResolveLevelFromPosition(employee.Position))),
+                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.LEVEL", ResolveLevelFromPosition(employee.Position)),
+                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.STATUS", employee.Status ?? string.Empty),
+                    ("PAGES.EMPLOYEE_RECORDS.SEARCH.COLUMNS.EVENT", ResolveLatestEvent(employee))),
                 cancellationToken: cancellationToken),
             "profile" => Task.FromResult<PageDataDto?>(CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.EMPLOYEE_RECORDS.PROFILE.TODO")),
             _ => Task.FromResult<PageDataDto?>(null)
         };
     }
 
-    private Task<PageDataDto?> GetOrganizationPageAsync(
+    private async Task<PageDataDto?> GetOrganizationPageAsync(
         string module,
         string page,
         string normalizedPage,
         int pageNumber,
         int pageSize,
+        IReadOnlyDictionary<string, string> filters,
         CancellationToken cancellationToken)
     {
-        var structureRows = new[]
-        {
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "People Operations"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Chanon Phumiphak"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "8"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "HR strategy, talent development")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Technology"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Anuwat Khem"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "14"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "3"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Product delivery, platform reliability")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Finance"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Benjamas Sriwilai"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "6"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Payroll, budgeting, treasury")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Marketing"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Oranicha Mek"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "6"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Demand generation, brand growth")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Customer Success"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Jirawat Kan"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "5"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "0"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Onboarding, renewals, support excellence")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Operations"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Amara Jittrakorn"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "5"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Facilities, procurement, logistics")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Sales"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Pimchanok Rukdee"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "3"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Enterprise acquisition, account growth")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", "Data & Analytics"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", "Piyada Sornchai"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", "3"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", "1"),
-                ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", "Insights, dashboards, data governance"))
-        };
+        var planEntries = await _context.WorkforcePlanEntries
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
 
-        var workforceRows = new[]
+        var departmentFilter = TryGetFilter(filters, "department");
+        var attritionFilter = TryGetFilter(filters, "attrition");
+
+        var filteredEntries = planEntries
+            .Where(entry => MatchesFilter(entry.Department, departmentFilter))
+            .Where(entry => MatchesFilter(entry.AttritionRisk, attritionFilter))
+            .ToList();
+
+        var relevantDepartments = filteredEntries
+            .Select(entry => entry.Department ?? "Unassigned")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var headcountQuery = _context.Employees.AsNoTracking();
+        if (relevantDepartments.Length > 0)
         {
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "People Operations"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "8"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "9"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Low"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "HR Business Partner")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Technology"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "14"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "16"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Senior Backend Engineer")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Finance"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "6"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "6"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Low"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Revenue Assurance Analyst")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Marketing"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "6"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "7"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Lifecycle Marketer")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Customer Success"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "5"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "5"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Low"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Technical Account Manager")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Operations"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "5"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "6"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Facilities Supervisor")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Sales"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "3"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "4"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "High"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Enterprise Account Executive")),
-            CreateRow(
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", "Data & Analytics"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", "3"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", "4"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", "Medium"),
-                ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", "Analytics Engineer"))
-        };
+            var normalizedDepartments = relevantDepartments
+                .Select(value => value.ToLowerInvariant())
+                .ToArray();
+
+            headcountQuery = headcountQuery.Where(employee =>
+                employee.Department != null &&
+                normalizedDepartments.Contains(employee.Department.ToLower()));
+        }
+
+        var headcountLookup = await headcountQuery
+            .GroupBy(employee => employee.Department)
+            .Select(group => new { Department = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.Department ?? "Unassigned", x => x.Count, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        IReadOnlyList<PageRowDto> BuildStructureRows()
+        {
+            return filteredEntries
+                .OrderBy(entry => entry.Department)
+                .Select(entry =>
+                {
+                    var departmentKey = entry.Department ?? "Unassigned";
+                    var currentHeadcount = headcountLookup.TryGetValue(departmentKey, out var count) ? count : 0;
+                    var openRoles = Math.Max(entry.ApprovedHeadcountQ3 - currentHeadcount, 0);
+
+                    return CreateRow(
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.DEPARTMENT", departmentKey),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.LEAD", entry.DepartmentLead ?? string.Empty),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.HEADCOUNT", currentHeadcount.ToString(CultureInfo.InvariantCulture)),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.OPEN_ROLES", openRoles.ToString(CultureInfo.InvariantCulture)),
+                        ("PAGES.ORGANIZATION.STRUCTURE.COLUMNS.FOCUS", entry.Focus ?? string.Empty));
+                })
+                .ToList();
+        }
+
+        IReadOnlyList<PageRowDto> BuildWorkforcePlanRows()
+        {
+            return filteredEntries
+                .OrderBy(entry => entry.Department)
+                .Select(entry =>
+                {
+                    var departmentKey = entry.Department ?? "Unassigned";
+                    var currentHeadcount = headcountLookup.TryGetValue(departmentKey, out var count) ? count : 0;
+
+                    return CreateRow(
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.DEPARTMENT", departmentKey),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.CURRENT_HEADCOUNT", currentHeadcount.ToString(CultureInfo.InvariantCulture)),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.APPROVED_Q3", entry.ApprovedHeadcountQ3.ToString(CultureInfo.InvariantCulture)),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.ATTRITION_RISK", entry.AttritionRisk ?? string.Empty),
+                        ("PAGES.ORGANIZATION.WORKFORCE_PLAN.COLUMNS.NEXT_HIRE", entry.NextCriticalHire ?? string.Empty));
+                })
+                .ToList();
+        }
 
         return normalizedPage switch
         {
-            "structure" => Task.FromResult<PageDataDto?>(CreateStaticPage(module, page, pageNumber, pageSize, "PAGES.ORGANIZATION.STRUCTURE.NOTE", structureRows)),
-            "workforce-plan" => Task.FromResult<PageDataDto?>(CreateStaticPage(module, page, pageNumber, pageSize, "PAGES.ORGANIZATION.WORKFORCE_PLAN.NOTE", workforceRows)),
-            _ => Task.FromResult<PageDataDto?>(null)
+            "structure" => CreateStaticPage(module, page, pageNumber, pageSize, "PAGES.ORGANIZATION.STRUCTURE.NOTE", BuildStructureRows()),
+            "workforce-plan" => CreateStaticPage(module, page, pageNumber, pageSize, "PAGES.ORGANIZATION.WORKFORCE_PLAN.NOTE", BuildWorkforcePlanRows()),
+            _ => null
         };
+
+        static string? TryGetFilter(IReadOnlyDictionary<string, string> source, string key)
+        {
+            if (source.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+
+            return null;
+        }
+
+        static bool MatchesFilter(string? target, string? filter)
+        {
+            if (string.IsNullOrWhiteSpace(filter))
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(target))
+            {
+                return false;
+            }
+
+            return string.Equals(target.Trim(), filter.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private Task<PageDataDto?> GetLeaveManagementPageAsync(
@@ -852,78 +864,68 @@ public class SqlPageDataRepository : IPageDataRepository
         };
     }
 
-    private PageDataDto? GetSettingsPage(
+    private async Task<PageDataDto?> GetSettingsPage(
         string module,
         string page,
         string normalizedPage,
         int pageNumber,
-        int pageSize)
+        int pageSize,
+        CancellationToken cancellationToken)
     {
-        return normalizedPage switch
+        switch (normalizedPage)
         {
-            "profile" => CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.SETTINGS.PROFILE.TODO"),
-            "notifications" => CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.SETTINGS.NOTIFICATIONS.TODO"),
-            "system" => CreateStaticPage(
-                module,
-                page,
-                pageNumber,
-                pageSize,
-                "PAGES.SETTINGS.SYSTEM.NOTE",
-                new[]
-                {
-                    CreateRow(
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Primary timezone"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "(UTC+07:00) Bangkok"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "IT Platform"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2025-02-15")),
-                    CreateRow(
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Workweek template"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "Mon-Fri, 09:00-18:00"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "People Operations"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2025-01-08")),
-                    CreateRow(
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Public holiday set"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "Thailand 2025"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "People Operations"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2025-02-01")),
-                    CreateRow(
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", "Data residency"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", "ap-southeast-1"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", "Security Office"),
-                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", "2024-12-12"))
-                }),
-            "security" => CreateStaticPage(
-                module,
-                page,
-                pageNumber,
-                pageSize,
-                "PAGES.SETTINGS.SECURITY.NOTE",
-                new[]
-                {
-                    CreateRow(
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Multi-factor authentication"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "Enforced"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-02-28"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Security Office")),
-                    CreateRow(
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Password policy"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "12 chars / rotation 90 days"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-01-15"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Security Office")),
-                    CreateRow(
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Privileged access review"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "In progress"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-03-05"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Internal Audit")),
-                    CreateRow(
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", "Data loss prevention"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", "Alerting"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", "2025-02-10"),
-                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", "Security Office"))
-                }),
-            _ => null
-        };
+            case "profile":
+                return CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.SETTINGS.PROFILE.TODO");
+            case "notifications":
+                return CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.SETTINGS.NOTIFICATIONS.TODO");
+            case "system":
+            {
+                var configurations = await _context.SystemConfigurations
+                    .AsNoTracking()
+                    .OrderBy(config => config.Key)
+                    .ToListAsync(cancellationToken);
+
+                var rows = configurations
+                    .Select(config => CreateRow(
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.CONFIGURATION", ResolveSystemConfigurationLabel(config.Key)),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.VALUE", config.Value),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.OWNER", config.Owner),
+                        ("PAGES.SETTINGS.SYSTEM.COLUMNS.UPDATED", FormatDate(config.UpdatedAtUtc))))
+                    .ToList();
+
+                return CreateStaticPage(module, page, pageNumber, pageSize, "PAGES.SETTINGS.SYSTEM.NOTE", rows);
+            }
+            case "security":
+            {
+                var controls = await _context.SecuritySettings
+                    .AsNoTracking()
+                    .OrderBy(setting => setting.Control)
+                    .ToListAsync(cancellationToken);
+
+                var rows = controls
+                    .Select(control => CreateRow(
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.CONTROL", control.Control),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.STATUS", control.Status),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.LAST_REVIEW", FormatDate(control.LastReviewedAtUtc)),
+                        ("PAGES.SETTINGS.SECURITY.COLUMNS.OWNER", control.Owner)))
+                    .ToList();
+
+                return CreateStaticPage(module, page, pageNumber, pageSize, "PAGES.SETTINGS.SECURITY.NOTE", rows);
+            }
+            default:
+                return null;
+        }
     }
+
+    private static string ResolveSystemConfigurationLabel(string key)
+        => key switch
+        {
+            "PrimaryTimezone" => "Primary timezone",
+            "WorkweekTemplate" => "Workweek template",
+            "HolidayCalendar" => "Public holiday set",
+            "DataResidency" => "Data residency",
+            _ => key
+        };
 
     private async Task<PageDataDto?> BuildPageAsync<T>(
         string module,
@@ -1189,6 +1191,28 @@ public class SqlPageDataRepository : IPageDataRepository
         }
 
         return "Senior";
+    }
+
+    private static string ResolveLatestEvent(Employee employee)
+    {
+        if (employee is null)
+        {
+            return string.Empty;
+        }
+
+        if (string.Equals(employee.Status, "On Leave", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Leave request approved";
+        }
+
+        if (string.Equals(employee.Status, "Probation", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Probation checkpoint scheduled";
+        }
+
+        var index = Math.Abs(HashCode.Combine(employee.EmployeeNumber, employee.Department)) % EmployeeEventTemplates.Length;
+        var template = EmployeeEventTemplates[index];
+        return template.Title.Replace("{dept}", employee.Department ?? "HQ", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class ParameterReplaceVisitor : ExpressionVisitor
