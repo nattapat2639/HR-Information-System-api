@@ -350,19 +350,31 @@ public class InMemoryPageDataRepository : IPageDataRepository
                     "leave-management",
                     "my",
                     null,
-                    Row(
+                    LeaveRow(
+                        "000000C8-0000-0001-0000-0070000030F1",
+                        "Approved",
+                        new DateTime(2025, 2, 21),
+                        new DateTime(2025, 2, 24),
                         ("PAGES.LEAVE.MY.COLUMNS.REFERENCE", "LV-2025-0001"),
                         ("PAGES.LEAVE.MY.COLUMNS.TYPE", "Annual Leave"),
                         ("PAGES.LEAVE.MY.COLUMNS.START", "2025-02-21"),
                         ("PAGES.LEAVE.MY.COLUMNS.END", "2025-02-24"),
                         ("PAGES.LEAVE.MY.COLUMNS.STATUS", "Approved")),
-                    Row(
+                    LeaveRow(
+                        "000000C8-0000-0002-0000-0074000030F2",
+                        "Pending",
+                        new DateTime(2025, 3, 3),
+                        new DateTime(2025, 3, 3),
                         ("PAGES.LEAVE.MY.COLUMNS.REFERENCE", "LV-2025-0004"),
                         ("PAGES.LEAVE.MY.COLUMNS.TYPE", "Sick Leave"),
                         ("PAGES.LEAVE.MY.COLUMNS.START", "2025-03-03"),
-                        ("PAGES.LEAVE.MY.COLUMNS.END", "2025-03-05"),
+                        ("PAGES.LEAVE.MY.COLUMNS.END", "2025-03-03"),
                         ("PAGES.LEAVE.MY.COLUMNS.STATUS", "Pending")),
-                    Row(
+                    LeaveRow(
+                        "000000C8-0000-0005-0000-007A000030F5",
+                        "Approved",
+                        new DateTime(2025, 3, 12),
+                        new DateTime(2025, 3, 12),
                         ("PAGES.LEAVE.MY.COLUMNS.REFERENCE", "LV-2025-0010"),
                         ("PAGES.LEAVE.MY.COLUMNS.TYPE", "Work From Home"),
                         ("PAGES.LEAVE.MY.COLUMNS.START", "2025-03-12"),
@@ -373,14 +385,24 @@ public class InMemoryPageDataRepository : IPageDataRepository
                     "leave-management",
                     "team",
                     null,
-                    Row(
-                        ("PAGES.LEAVE.TEAM.COLUMNS.EMPLOYEE", "Warit Somchai"),
+                    LeaveRow(
+                        "000000C8-0000-0003-0000-0076000030F3",
+                        "Pending",
+                        new DateTime(2025, 3, 10),
+                        new DateTime(2025, 3, 11),
+                        includeTeamActions: true,
+                        ("PAGES.LEAVE.TEAM.COLUMNS.EMPLOYEE", "Nina Chai"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.TYPE", "Work From Home"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.PERIOD", "2025-03-10 to 2025-03-11"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.STATUS", "Pending"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.REQUESTED_ON", "2025-02-28")),
-                    Row(
-                        ("PAGES.LEAVE.TEAM.COLUMNS.EMPLOYEE", "Patchara T."),
+                    LeaveRow(
+                        "000000C8-0000-0006-0000-007C000030F6",
+                        "Pending",
+                        new DateTime(2025, 3, 18),
+                        new DateTime(2025, 3, 22),
+                        includeTeamActions: true,
+                        ("PAGES.LEAVE.TEAM.COLUMNS.EMPLOYEE", "Warit Somchai"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.TYPE", "Annual Leave"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.PERIOD", "2025-03-18 to 2025-03-22"),
                         ("PAGES.LEAVE.TEAM.COLUMNS.STATUS", "Pending"),
@@ -389,13 +411,21 @@ public class InMemoryPageDataRepository : IPageDataRepository
                     "leave-management",
                     "history",
                     null,
-                    Row(
+                    LeaveRow(
+                        "000000C8-0000-0004-0000-0078000030F4",
+                        "Approved",
+                        new DateTime(2024, 12, 20),
+                        new DateTime(2024, 12, 24),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.REFERENCE", "LV-2024-0145"),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.TYPE", "Annual Leave"),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.PERIOD", "2024-12-20 to 2024-12-24"),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.DAY_USED", "5"),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.STATUS", "Approved")),
-                    Row(
+                    LeaveRow(
+                        "000000C8-0000-0007-0000-007E000030F7",
+                        "Approved",
+                        new DateTime(2024, 11, 2),
+                        new DateTime(2024, 11, 3),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.REFERENCE", "LV-2024-0162"),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.TYPE", "Sick Leave"),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.PERIOD", "2024-11-02 to 2024-11-03"),
@@ -717,5 +747,53 @@ public class InMemoryPageDataRepository : IPageDataRepository
         }
 
         return new PageRowDto(dictionary);
+    }
+
+    private static PageRowDto LeaveRow(
+        string id,
+        string status,
+        DateTime start,
+        DateTime end,
+        params (string Key, string Value)[] columns)
+        => LeaveRow(id, status, start, end, includeTeamActions: false, columns);
+
+    private static PageRowDto LeaveRow(
+        string id,
+        string status,
+        DateTime start,
+        DateTime end,
+        bool includeTeamActions,
+        params (string Key, string Value)[] columns)
+    {
+        var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["META.REQUEST_ID"] = id,
+            ["META.STATUS"] = status,
+            ["META.START_DATE"] = start.ToString("yyyy-MM-dd"),
+            ["META.END_DATE"] = end.ToString("yyyy-MM-dd")
+        };
+
+        foreach (var (key, value) in columns)
+        {
+            dictionary[key] = value;
+        }
+
+        var actions = new List<PageRowActionDto>();
+        if (status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+        {
+            if (includeTeamActions)
+            {
+                actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.APPROVE", "check_circle", "leave:approve"));
+                actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.REJECT", "highlight_off", "leave:reject"));
+            }
+            else
+            {
+                actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.WITHDRAW", "undo", "leave:withdraw"));
+            }
+        }
+
+        actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.VIEW", "visibility", "leave:view"));
+
+        return new PageRowDto(dictionary, actions);
     }
 }

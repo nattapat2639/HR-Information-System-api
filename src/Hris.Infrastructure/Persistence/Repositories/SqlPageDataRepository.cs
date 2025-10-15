@@ -16,10 +16,10 @@ namespace Hris.Infrastructure.Persistence.Repositories;
 
 public class SqlPageDataRepository : IPageDataRepository
 {
-    private static readonly Guid DefaultEmployeeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-    private static readonly Guid DefaultPayrollEmployeeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-    private static readonly Guid DefaultPerformanceEmployeeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-    private static readonly Guid DefaultTrainingEmployeeId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid DefaultEmployeeId = Guid.Parse("00000064-0000-0001-0000-00660000309E");
+    private static readonly Guid DefaultPayrollEmployeeId = Guid.Parse("00000064-0000-0005-0000-006E000030A2");
+    private static readonly Guid DefaultPerformanceEmployeeId = Guid.Parse("00000064-0000-0002-0000-00600000309F");
+    private static readonly Guid DefaultTrainingEmployeeId = Guid.Parse("00000064-0000-0003-0000-0062000030A0");
     private static readonly DateTime HistoricCutoffDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly (string Title, string Type)[] EmployeeEventTemplates =
     {
@@ -71,6 +71,7 @@ public class SqlPageDataRepository : IPageDataRepository
         ["PAGES.LEAVE.OPTIONS.ANNUAL"] = new[] { "Annual Leave" },
         ["PAGES.LEAVE.OPTIONS.SICK"] = new[] { "Sick Leave" },
         ["PAGES.LEAVE.OPTIONS.UNPAID"] = new[] { "Unpaid Leave" },
+        ["PAGES.LEAVE.OPTIONS.FAMILY"] = new[] { "Family Responsibility" },
         ["COMMON.PERIODS.CURRENT_MONTH"] = new[] { "March 2025", "Current Month" },
         ["COMMON.PERIODS.LAST_MONTH"] = new[] { "February 2025", "Last Month" },
         ["COMMON.PERIODS.THIS_MONTH"] = new[] { "This Month" },
@@ -371,13 +372,18 @@ public class SqlPageDataRepository : IPageDataRepository
                     l => l.LeaveType,
                     l => l.Status
                 },
-                q => q,
-                leave => CreateRow(
-                    ("PAGES.LEAVE.MY.COLUMNS.REFERENCE", leave.Reference),
-                    ("PAGES.LEAVE.MY.COLUMNS.TYPE", leave.LeaveType),
-                    ("PAGES.LEAVE.MY.COLUMNS.START", FormatDate(leave.StartDate)),
-                    ("PAGES.LEAVE.MY.COLUMNS.END", FormatDate(leave.EndDate)),
-                    ("PAGES.LEAVE.MY.COLUMNS.STATUS", leave.Status)),
+                q => q.Include(l => l.Employee),
+                leave => CreateLeaveRow(
+                    leave,
+                    new[]
+                    {
+                        ("PAGES.LEAVE.MY.COLUMNS.REFERENCE", leave.Reference),
+                        ("PAGES.LEAVE.MY.COLUMNS.TYPE", leave.LeaveType),
+                        ("PAGES.LEAVE.MY.COLUMNS.START", FormatDate(leave.StartDate)),
+                        ("PAGES.LEAVE.MY.COLUMNS.END", FormatDate(leave.EndDate)),
+                        ("PAGES.LEAVE.MY.COLUMNS.STATUS", leave.Status)
+                    },
+                    BuildMyLeaveActions(leave)),
                 applyCustomFilters: ApplyLeaveRequestFilters,
                 cancellationToken: cancellationToken),
             "team" => BuildPageAsync(
@@ -396,13 +402,18 @@ public class SqlPageDataRepository : IPageDataRepository
                     l => l.Status,
                     l => l.Employee != null ? l.Employee.FullName : null
                 },
-                q => q,
-                leave => CreateRow(
-                    ("PAGES.LEAVE.TEAM.COLUMNS.EMPLOYEE", leave.Employee?.FullName ?? "Unknown"),
-                    ("PAGES.LEAVE.TEAM.COLUMNS.TYPE", leave.LeaveType),
-                    ("PAGES.LEAVE.TEAM.COLUMNS.PERIOD", $"{FormatDate(leave.StartDate)} to {FormatDate(leave.EndDate)}"),
-                    ("PAGES.LEAVE.TEAM.COLUMNS.STATUS", leave.Status),
-                    ("PAGES.LEAVE.TEAM.COLUMNS.REQUESTED_ON", FormatDate(leave.RequestedOn))),
+                q => q.Include(l => l.Employee),
+                leave => CreateLeaveRow(
+                    leave,
+                    new[]
+                    {
+                        ("PAGES.LEAVE.TEAM.COLUMNS.EMPLOYEE", leave.Employee?.FullName ?? "Unknown"),
+                        ("PAGES.LEAVE.TEAM.COLUMNS.TYPE", leave.LeaveType),
+                        ("PAGES.LEAVE.TEAM.COLUMNS.PERIOD", $"{FormatDate(leave.StartDate)} to {FormatDate(leave.EndDate)}"),
+                        ("PAGES.LEAVE.TEAM.COLUMNS.STATUS", leave.Status),
+                        ("PAGES.LEAVE.TEAM.COLUMNS.REQUESTED_ON", FormatDate(leave.RequestedOn))
+                    },
+                    BuildTeamLeaveActions(leave)),
                 applyCustomFilters: ApplyLeaveRequestFilters,
                 cancellationToken: cancellationToken),
             "history" => BuildPageAsync(
@@ -420,17 +431,18 @@ public class SqlPageDataRepository : IPageDataRepository
                     l => l.LeaveType,
                     l => l.Status
                 },
-                q => q,
-                leave =>
-                {
-                    var daysUsed = Math.Max(1, (leave.EndDate - leave.StartDate).Days + 1);
-                    return CreateRow(
+                q => q.Include(l => l.Employee),
+                leave => CreateLeaveRow(
+                    leave,
+                    new[]
+                    {
                         ("PAGES.LEAVE.HISTORY.COLUMNS.REFERENCE", leave.Reference),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.TYPE", leave.LeaveType),
                         ("PAGES.LEAVE.HISTORY.COLUMNS.PERIOD", $"{FormatDate(leave.StartDate)} to {FormatDate(leave.EndDate)}"),
-                        ("PAGES.LEAVE.HISTORY.COLUMNS.DAY_USED", daysUsed.ToString(CultureInfo.InvariantCulture)),
-                        ("PAGES.LEAVE.HISTORY.COLUMNS.STATUS", leave.Status));
-                },
+                        ("PAGES.LEAVE.HISTORY.COLUMNS.DAY_USED", CalculateDayUsage(leave)),
+                        ("PAGES.LEAVE.HISTORY.COLUMNS.STATUS", leave.Status)
+                    },
+                    BuildHistoryLeaveActions(leave)),
                 applyCustomFilters: ApplyLeaveRequestFilters,
                 cancellationToken: cancellationToken),
             "create" => Task.FromResult<PageDataDto?>(CreateNoteOnlyPage(module, page, pageNumber, pageSize, "PAGES.LEAVE.CREATE.TODO")),
@@ -968,6 +980,30 @@ public class SqlPageDataRepository : IPageDataRepository
         IQueryable<LeaveRequest> query,
         IReadOnlyCollection<KeyValuePair<string, string>> filters)
     {
+        var leaveTypeFilter = TryGetFilterValue(filters, "leaveType", "type");
+        if (!string.IsNullOrWhiteSpace(leaveTypeFilter))
+        {
+            var normalized = leaveTypeFilter.Trim();
+            query = query.Where(l => EF.Functions.ILike(l.LeaveType, normalized));
+        }
+
+        var statusFilter = TryGetFilterValue(filters, "status");
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+        {
+            var normalized = statusFilter.Trim();
+            query = query.Where(l => EF.Functions.ILike(l.Status, normalized));
+        }
+
+        var employeeFilter = TryGetFilterValue(filters, "employee", "employeeKeyword");
+        if (!string.IsNullOrWhiteSpace(employeeFilter))
+        {
+            var keyword = $"%{employeeFilter.Trim()}%";
+            query = query.Where(l =>
+                l.Employee != null &&
+                (EF.Functions.ILike(l.Employee.FullName, keyword) ||
+                 EF.Functions.ILike(l.Employee.EmployeeNumber, keyword)));
+        }
+
         var startDate = TryGetDateFilter(filters, "startDate");
         if (startDate.HasValue)
         {
@@ -981,6 +1017,25 @@ public class SqlPageDataRepository : IPageDataRepository
         }
 
         return query;
+    }
+
+    private static string? TryGetFilterValue(
+        IReadOnlyCollection<KeyValuePair<string, string>> filters,
+        params string[] keys)
+    {
+        foreach (var filter in filters)
+        {
+            foreach (var key in keys)
+            {
+                if (filter.Key.Equals(key, StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(filter.Value))
+                {
+                    return filter.Value.Trim();
+                }
+            }
+        }
+
+        return null;
     }
 
     private static DateTime? TryGetDateFilter(
@@ -1139,6 +1194,28 @@ public class SqlPageDataRepository : IPageDataRepository
             noteKey);
     }
 
+    private static PageRowDto CreateLeaveRow(
+        LeaveRequest leave,
+        IEnumerable<(string Key, string Value)> displayColumns,
+        IReadOnlyCollection<PageRowActionDto> actions)
+    {
+        var columns = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["META.REQUEST_ID"] = leave.Id.ToString(),
+            ["META.STATUS"] = leave.Status,
+            ["META.START_DATE"] = FormatDate(leave.StartDate),
+            ["META.END_DATE"] = FormatDate(leave.EndDate),
+            ["META.EMPLOYEE"] = leave.Employee?.FullName ?? string.Empty
+        };
+
+        foreach (var (key, value) in displayColumns)
+        {
+            columns[key] = value;
+        }
+
+        return new PageRowDto(columns, actions);
+    }
+
     private static PageRowDto CreateRow(params (string Key, string Value)[] columns)
     {
         var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -1153,6 +1230,50 @@ public class SqlPageDataRepository : IPageDataRepository
 
     private static string FormatDate(DateTime date)
         => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static string CalculateDayUsage(LeaveRequest leave)
+    {
+        if (leave.IsHalfDay)
+        {
+            return "0.5";
+        }
+
+        var days = Math.Max(1, (leave.EndDate.Date - leave.StartDate.Date).Days + 1);
+        return days.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static IReadOnlyCollection<PageRowActionDto> BuildMyLeaveActions(LeaveRequest leave)
+    {
+        var actions = new List<PageRowActionDto>();
+        if (string.Equals(leave.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+        {
+            actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.WITHDRAW", "undo", "leave:withdraw"));
+        }
+
+        actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.VIEW", "visibility", "leave:view"));
+        return actions;
+    }
+
+    private static IReadOnlyCollection<PageRowActionDto> BuildTeamLeaveActions(LeaveRequest leave)
+    {
+        var actions = new List<PageRowActionDto>();
+        if (string.Equals(leave.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+        {
+            actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.APPROVE", "check_circle", "leave:approve"));
+            actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.REJECT", "highlight_off", "leave:reject"));
+        }
+
+        actions.Add(new PageRowActionDto("PAGES.LEAVE.ACTIONS.VIEW", "visibility", "leave:view"));
+        return actions;
+    }
+
+    private static IReadOnlyCollection<PageRowActionDto> BuildHistoryLeaveActions(LeaveRequest leave)
+    {
+        return new[]
+        {
+            new PageRowActionDto("PAGES.LEAVE.ACTIONS.VIEW", "visibility", "leave:view")
+        };
+    }
 
     private static string FormatCurrency(decimal amount)
         => amount.ToString("#,##0.##", CultureInfo.InvariantCulture);

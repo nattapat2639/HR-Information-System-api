@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IEmployeeFieldDefinitionRepository, InMemoryEmployeeFieldDefinitionRepository>();
             services.AddSingleton<IEmployeeFieldValueRepository, InMemoryEmployeeFieldValueRepository>();
             services.AddSingleton<IPageDataRepository, InMemoryPageDataRepository>();
+            services.AddSingleton<ILeaveRequestRepository, InMemoryLeaveRequestRepository>();
             return services;
         }
 
@@ -37,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmployeeFieldDefinitionRepository, SqlEmployeeFieldDefinitionRepository>();
         services.AddScoped<IEmployeeFieldValueRepository, SqlEmployeeFieldValueRepository>();
         services.AddScoped<IPageDataRepository, SqlPageDataRepository>();
+        services.AddScoped<ILeaveRequestRepository, SqlLeaveRequestRepository>();
 
         return services;
     }

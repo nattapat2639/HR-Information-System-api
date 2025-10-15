@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPageDataService, PageDataService>();
         services.AddScoped<IEmployeeFieldDefinitionService, EmployeeFieldDefinitionService>();
         services.AddScoped<IEmployeeFieldValueService, EmployeeFieldValueService>();
+        services.AddScoped<ILeaveManagementService, LeaveManagementService>();
         return services;
     }
 }

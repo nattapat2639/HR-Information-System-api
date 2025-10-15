@@ -63,6 +63,12 @@ public class HrisDbContext : DbContext
             entity.Property(e => e.Reference).HasMaxLength(32);
             entity.Property(e => e.LeaveType).HasMaxLength(64);
             entity.Property(e => e.Status).HasMaxLength(64);
+            entity.Property(e => e.Reason).HasMaxLength(512);
+            entity.Property(e => e.ContactDuringLeave).HasMaxLength(128);
+            entity.Property(e => e.ManagerComment).HasMaxLength(512);
+            entity.Property(e => e.ApproverName).HasMaxLength(128);
+            entity.Property(e => e.SupportingDocumentUrl).HasMaxLength(256);
+            entity.Property(e => e.IsHalfDay).HasDefaultValue(false);
 
             entity.HasOne(l => l.Employee)
                 .WithMany()
@@ -325,8 +331,18 @@ public class HrisDbContext : DbContext
 
         modelBuilder.Entity<Employee>().HasData(employees);
 
-        var leaveTypes = new[] { "Annual Leave", "Sick Leave", "Work From Home", "Unpaid Leave" };
-        var leaveStatuses = new[] { "Approved", "Pending", "Approved", "Rejected" };
+        var leaveTypes = new[] { "Annual Leave", "Sick Leave", "Work From Home", "Unpaid Leave", "Family Responsibility" };
+        var leaveStatuses = new[] { "Approved", "Pending", "Approved", "Rejected", "Pending", "Approved" };
+        var leaveReasons = new[]
+        {
+            "Family commitment and caregiving support.",
+            "Medical follow-up appointment as advised by doctor.",
+            "Remote work arrangement for personal project delivery.",
+            "Vacation recharge planned months in advance.",
+            "Personal errands that require government office visit.",
+            "Rest after completing critical release."
+        };
+
         var leaveRequests = new List<LeaveRequest>(capacity: 200);
 
         for (var i = 0; i < 200; i++)
@@ -342,6 +358,28 @@ public class HrisDbContext : DbContext
             }
 
             var requestedOn = startDate.AddDays(-Math.Max(1, (i % 6) + 1));
+            var reason = leaveReasons[i % leaveReasons.Length];
+            var isHalfDay = duration == 1 && i % 3 == 0;
+            var contactDuringLeave = $"+66-8{(i * 7) % 10}{(i * 13) % 10}{(i * 17) % 10}-{(3000 + (i * 19) % 7000):0000}";
+            Guid? approverId = null;
+            string? approverName = null;
+            DateTime? decisionOn = null;
+            string? managerComment = null;
+
+            if (!string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                var approver = employees[(i * 7 + 11) % employees.Count];
+                approverId = approver.Id;
+                approverName = approver.FullName;
+                decisionOn = requestedOn.AddDays(Math.Max(1, (i % 4) + 1));
+                managerComment = status == "Approved"
+                    ? "Approved - coverage confirmed for the requested dates."
+                    : "Rejected - overlaps with critical delivery milestone.";
+            }
+
+            var supportingDocumentUrl = i % 9 == 0
+                ? $"https://cdn.example.com/leave-supporting/leave-{i + 1:000}.pdf"
+                : null;
 
             leaveRequests.Add(new LeaveRequest
             {
@@ -349,10 +387,18 @@ public class HrisDbContext : DbContext
                 EmployeeId = employee.Id,
                 Reference = $"LV-{startDate.Year}-{i + 1:0000}",
                 LeaveType = leaveTypes[i % leaveTypes.Length],
+                Reason = reason,
+                IsHalfDay = isHalfDay,
+                ContactDuringLeave = contactDuringLeave,
                 StartDate = startDate,
                 EndDate = endDate,
                 Status = status,
-                RequestedOn = requestedOn
+                RequestedOn = requestedOn,
+                ApproverId = approverId,
+                ApproverName = approverName,
+                DecisionOn = decisionOn,
+                ManagerComment = managerComment,
+                SupportingDocumentUrl = supportingDocumentUrl
             });
         }
 
